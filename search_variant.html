@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+{# This is the search page for lab/searchvariant/#}
+
+    {% extends 'core/base_bs.html' %}
+    {% load static %}
+
+
+    {% block title %}
+    Lab | Search Variants
+    {% endblock title %}
+
+    
+    {% block content %}
+    {% comment %}
+    ##############
+    # SEARCH DIV #
+    ##############
+    {% endcomment %}
+    <div class="card shadow mt-3">
+
+        {# --- HEADER --- #}
+        <div class="card-header bg-dark text-white">
+            <h5 class="card-title text-white"><i class="fas fa-search"></i><i> </i><i class="fas fa-braille"></i> Search Variant 
+                &nbsp;</h5>
+        </div>
+        {% if searchquery == None or searchquery == '' %}
+
+            {# ---ICON SEARCH BOX --- #}
+            <div class="icon">
+                <h1 class="fas fa-braille"></h1>   
+            </div>
+            <div class="title-icon">
+                <h3 style="font-size:60px;" >Variants </h3>
+            </div>
+
+            {# ---SEARCH BOX --- #}
+            <div class="search-container mt-4">
+                <div class="search-box">
+                    <form class="form-inline" action="" method="GET">
+                        <div class="input-group">
+                            <input id="search-variant" class="form-control" name="searchvariant" type="search"
+                                placeholder="{{ searchquery }} ..." aria-label="Search"
+                                style="width: 400px; height: 15px; padding: 15px; font-size: 16px; border-radius: 5px 0 0 5px; box-shadow: 0 0 1px;">
+                            <div class="input-group-append">
+                                <button id="search-button" class="btn btn-primary" type="submit">Search</button>
+                            </div>
+                        </div>
+                        <div class="dropdown ml-1">
+                            <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" id="dropdown-button">GRCh37</button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item example-query" href="#">GRCh37</a>
+                                <a class="dropdown-item example-query" href="#">GRCh38</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+          
+        {%elif searchquery != None and searchquery != '' %}
+
+            {# ---SEARCH BOX --- #}
+            <div class ="search-box">
+                <div class="card-body">
+                    <form class="form-inline my-2 my-lg-0" action="" method="GET">
+                        <input id="search-variant" class="form-control mr-sm-2" name="searchvariant" type="search"
+                            placeholder="{{ searchquery }}" aria-label="Search" onkeydown="handleKeyDown(event)">
+                        <button id="search-button" class="btn btn btn-primary" type="submit"> Search </button>
+                        <div class="dropdown ml-1">
+                            <button class="btn btn-secondary dropdown-toggle" data-toggle="dropdown" id="dropdown-button">GRCh37</button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item example-query" href="#">GRCh37</a>
+                                <a class="dropdown-item example-query" href="#">GRCh38</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card-body">
+
+                {# --- VARIANT HEADER --- #}
+                <div class="card-header bg-dark text-white">
+                    <span class="card-title font-weight-bold"> Variant: {{searchquery_converted}} </span>
+                </div>
+
+                {#--- VARIANT TABLE ---#}
+            {%if variants or outsource_variants%}
+                {% for message in messages %}
+                    {% if message.tags == "warning" %}
+                        <div class="alert alert-primary alert-dismissible fade show mt-3" role="alert">
+                        The range was adjusted to -10 and +10 bp from the starting <strong>position</strong>
+                        <br>
+                    {% elif message.tags == "success" %}
+                        <div class="alert alert-primary alert-dismissible fade show mt-3" role="alert">
+                    {% endif %}
+                            <strong>{{ message }}</strong>
+                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                <span aria-hidden="true">&times;</span>
+                            </button>
+                        </div>
+                {% endfor %}
+                <div class="card-body">             
+                    <table id="variants_table" class="table table-hover text-center">
+                            <thead class="thead">
+                                <tr>
+                                    <th>Chromosome</th>
+                                    <th>Position</th>
+                                    <th>Reference</th>
+                                    <th>Alteration</th>
+                                    <th>Gene</th>
+                                    <th>HGVSc</th>
+                                    <th >dbSNP</th>
+                                    <th style="display: none;">ClinVar</th>
+                                    <th style="display: none;">ClinGen</th>
+                                    <th style="display: none;">VarSome</th>
+                                    <th style="display: none;">gnomAD</th>
+                                    <th style="display: none;">Franklin Genoox</th>
+                                    <th style="display: none;">AutoPVS1</th>
+                                    <th style="display: none;">Google</th>
+                                    <th class='hide'>Report(s)</th>
+                                </tr>
+                            </thead>
+                            {%if outsource_variants and not variants%}
+                            {% comment %} Only one outsource variant because of Vep in view {% endcomment %}
+                                <tr class='clickable-row'>
+                                    <td>{{ outsource_variant_atributes.chromosome }}</td>
+                                    <td>{{ outsource_variant_atributes.position }}</td>
+                                    <td>-</td>
+                                    <td>-</td>
+                                    <td>{{ outsource_variant_atributes.gene }}</td>
+                                    <td>{{ outsource_variant_atributes.hgvsc }}</td>
+                                    {% if "GRCh38" in request.get_full_path %}
+                                        {% if "rs" in outsource_variant_atributes.dbsnp  %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/{{outsource_variant_atributes.dbsnp}}">{{outsource_variant_atributes.dbsnp}}</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term={{outsource_variant_atributes.dbsnp}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?dbSNP.rs={{outsource_variant_atributes.dbsnp}}"></a></td>
+                    
+                                        {% else %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/?term=GRCh38:chr{{ outsource_variant_atributes.chromosome }}:{{ outsource_variant_atributes.position }} AND {{ outsource_variant_atributes.hgvsc }}">NA</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=GRCh38:chr{{ outsource_variant_atributes.chromosome }}:{{ outsource_variant_atributes.position }} AND {{ outsource_variant_atributes.hgvsc }}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?gnomAD.id={{searchquery_converted.0}}"></a></td>
+                                
+                                        {% endif %}
+                                            <td style="display: none;"><a target="_blank" href="https://varsome.com/variant/hg38/{{searchquery_converted.0}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://gnomad.broadinstitute.org/variant/{{searchquery_converted.0}}?dataset=gnomad_r3"></a></td>  
+                                            <td style="display: none;"><a target="_blank" href="https://franklin.genoox.com/clinical-db/variant/snp/chr{{searchquery_converted.0}}-hg38"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://autopvs1.bgi.com/variant/GRCh38/{{searchquery_converted.0}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.google.com/"></a></td>
+
+
+                                    {% elif "GRCh37" in request.get_full_path %}
+                                    
+                                        {% if "rs" in outsource_variant_atributes.dbsnp  %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/{{outsource_variant_atributes.dbsnp}}">{{outsource_variant_atributes.dbsnp}}</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term={{outsource_variant_atributes.dbsnp}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?dbSNP.rs={{outsource_variant_atributes.dbsnp}}"></a></td>
+                            
+                                        {% else %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/?term=GRCh37:chr{{ outsource_variant_atributes.chromosome }}:{{ outsource_variant_atributes.position }} AND {{ outsource_variant_atributes.hgvsc }}">NA</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=GRCh37:chr{{ outsource_variant_atributes.chromosome }}:{{ outsource_variant_atributes.position }} AND {{ outsource_variant_atributes.hgvsc }}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?gnomAD.id={{searchquery_converted.0}}"></a></td>
+                                        
+                                        {% endif %}
+                                            <td style="display: none;"><a target="_blank" href="https://varsome.com/variant/hg19/{{searchquery_converted.0}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://gnomad.broadinstitute.org/variant/{{searchquery_converted.0}}"></a></td>  
+                                            <td style="display: none;"><a target="_blank" href="https://franklin.genoox.com/clinical-db/variant/snp/chr{{searchquery_converted.0}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://autopvs1.bgi.com/variant/hg19/{{searchquery_converted.0}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.google.com/"></a></td>
+                                    {% endif %}  
+                                    <td>                             
+                                        {% for r in outsource_reports %}
+                                                <a class='hide' href="{% url 'reports:forms' r.pk %}">{{r.sample.sample_name}}</a>
+                                            {% empty %}
+                                        {% endfor %} 
+                                    </td>
+                                </tr>   
+                                 
+                                </table>
+                            </div>
+                        {%elif not outsource_variants and variants%}
+                            {% for v in variants %}   
+                                <tr class='clickable-row'>
+                                    <td>{{ v.chrom }}</td>
+                                    <td>{{ v.position }}</td>
+                                    <td>{{ v.ref }}</td>
+                                    <td>{{ v.alt }}</td>
+                                    <td>{{ v.gene }}</td>
+                                    <td>{{ v.ebi_codon }}</td>
+                                    {% if "GRCh38" in request.get_full_path  %}
+                                        {% if "rs" in v.refseq_id %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/{{v.refseq_id}}">{{v.refseq_id}}</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term={{v.refseq_id}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?dbSNP.rs={{v.refseq_id}}"></a></td>
+
+                                        {% else %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/?term=GRCh38:chr{{v.chrom}}:{{v.position}} AND {{v.ebi_codon}}">NA</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=GRCh38:chr{{v.chrom}}:{{v.position}} AND {{v.ebi_codon}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?gnomAD.id={{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                        
+                                                                            
+                                        {% endif %}
+                                            <td style="display: none;"><a target="_blank" href="https://varsome.com/variant/hg38/{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://gnomad.broadinstitute.org/variant/{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}?dataset=gnomad_r3"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://franklin.genoox.com/clinical-db/variant/snp/chr{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}-hg38"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://autopvs1.bgi.com/variant/GRCh38/{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.google.com/"></a></td>
+                               
+                                            
+                                    {% elif "GRCh37" in request.get_full_path  %}
+                                        {% if "rs" in v.refseq_id %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/{{v.refseq_id}}">{{v.refseq_id}}</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term={{v.refseq_id}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?dbSNP.rs={{v.refseq_id}}"></a></td>
+
+                                        {% else %}
+                                            <td><a target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/?term=GRCh37:chr{{v.chrom}}:{{v.position}} AND {{v.ebi_codon}}">NA</a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term=GRCh37:chr{{v.chrom}}:{{v.position}} AND {{v.ebi_codon}}"></a></td>
+                                            <td style="display: none;"><a target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?gnomAD.id={{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                            
+                                                                                   
+                                        {% endif %}
+                                        <td style="display: none;"><a target="_blank" href="https://varsome.com/variant/hg19/{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                        <td style="display: none;"><a target="_blank" href="https://gnomad.broadinstitute.org/variant/{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                        <td style="display: none;"><a target="_blank" href="https://franklin.genoox.com/clinical-db/variant/snp/chr{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                        <td style="display: none;"><a target="_blank" href="https://autopvs1.bgi.com/variant/hg19/{{v.chrom}}-{{v.position}}-{{v.ref}}-{{v.alt}}"></a></td>
+                                        <td style="display: none;"><a target="_blank" href="https://www.google.com/"></a></td>
+                                    {% endif %}
+                                    <td>
+                                        {% for r in reports %}
+                                            {% if r.variant == v %}
+                                                <a class='hide' href="{% url 'reports:forms' r.report.pk %}">{{r.report.sample.sample_name}}</a>
+                                            {% endif %}
+                                        {% endfor %} 
+                                    </td>
+                                    {% empty %}
+                            </tr>
+                        {% endfor %}         
+                        </table>
+                        </div>                      
+                        {%endif%}    
+
+            {#--- Buttons databases ---#} 
+                <div class="card-body">
+                    <div id="db_btn" class="buttons">
+                        <td>
+                            <a id="db_button" class="btn btn-primary" target="_blank">
+                                <i class="fas fa-database"></i><i> </i><b>dbSNP</b>
+                            </a>
+                        </td> 
+                        <td>
+                            <a id="clinvar_button" class="btn btn-info" target="_blank">
+                                <i class="fas fa-capsules"></i><i> </i><b>ClinVar</b>
+                            </a>
+                        </td>
+                        <td>
+                            <a id="clingen_button" class="btn btn-secondary" target="_blank">
+                                <i class="fas fa-dna"></i><i> </i><b>ClinGen</b>
+                            </a>
+                        </td> 
+                        <td>
+                            <a id="varsome_button" class="btn btn-success" target="_blank">
+                                <i class="fas fa-check"></i><i> </i><b>VarSome</b>
+                            </a>
+                        </td> 
+                        <td>
+                            <a id="gnomad_button" class="btn btn-dark" target="_blank">
+                                <i class="fas fa-chart-area"></i><i> </i><b>gnomAD</b>
+                            </a>
+                        </td> 
+                        <td>
+                            <a id="franklingenoox_button" class="btn btn-warning" target="_blank">
+                                <i class="fas fa-vials"></i><i> </i><b>FranklinGenoox</b>
+                            </a>
+                        </td> 
+                        <td>
+                            <a id="autopvs1_button" class="btn btn-danger" target="_blank">
+                                <i class="fas fa-syringe"></i><i> </i><b>AutoPVS1</b>
+                            </a>
+                        </td> 
+                        <td>
+                            <a id="google_button" class="btn btn-light text-primary" target="_blank">
+                                <i class="fab fa-google"></i><i> </i><b>Google</b>
+                            </a>
+                        </td>
+                    </div>
+                      
+                
+                {#--- VARIANT REPORT TABLE ---#} 
+                    <table id="reports_table" class="table table-hover">
+                        <thead class="thead">
+                            <br>
+                            <tr>
+                                <th>Report(s)</th>
+                                <th>Test Description</th>
+                                <th class="text-center">Variant Classification</th>
+                            </tr> 
+                        </thead>
+                        {% if outsource_reports%}
+                            {% for r in outsource_reports %}
+                                    <tr>
+                                        <td ><a target="_blank" href="{% url 'reports:forms' r.pk %}">{{r.sample.sample_name}}</a></td>
+                                        <td><b>{{r.test_available.code_name}}</b> - {{r.test_available.display_name}}</td>
+                                        <td class="text-center">-</td>
+                                        
+                                    </tr>
+                            {% endfor %} 
+                        {% endif %}
+                        {% for v in variants %}
+                            {% for r in reports %}
+                                {% if r.variant == v %}
+                                    <tr>
+                                        <td ><a target="_blank" href="{% url 'reports:forms' r.report.pk %}">{{r.report.sample.sample_name}}</a></td>
+                                        <td><b>{{r.report.test_available.code_name}}</b> - {{r.report.test_available.display_name}}</td>
+                                        <td class="text-center"> {{r.classification}} </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %} 
+                        {% endfor %}        
+                    </table>
+                </div>                   
+            
+        
+            {%else%} {% comment %} not (variant or outvariant) {% endcomment %}
+                {% if messages %}
+                    {% for message in messages %}
+                        {% if message.tags == "error" %}
+                            <div class="alert alert-danger mt-3" role="alert">  
+                                Please review the <strong>syntax</strong> in the search query 
+                                <br>
+                        {% elif message.tags == "info" %}
+                            <div class="alert alert-danger mt-3" role="alert">
+
+                        {% elif message.tags == "warning" %}
+                                <div class="alert alert-danger mt-3" role="alert">
+                        {% endif %}
+                                <strong>{{ message }}</strong>
+                            </div>
+                    {% endfor %}
+
+                {%else%}
+                    <div class="alert alert-danger mt-3" role="alert">
+                        Error: Variant not found in Ophidx Database! 
+                    </div>
+                    {% if "GRCh38" in request.get_full_path  %}
+                    <div class="card-body">
+                        <div class="buttons">
+                            <td>
+                                <a id="db_button" class="btn btn-primary" target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/?term={{searchquery_converted.0}}">
+                                    <i class="fas fa-database"></i><i> </i><b>dbSNP</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="clinvar_button" class="btn btn-info" target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term={{searchquery_converted.0}}">
+                                    <i class="fas fa-capsules"></i><i> </i><b>ClinVar</b>
+                                </a>
+                            </td>
+                            <td>
+                                <a id="clingen_button" class="btn btn-secondary" target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?gnomAD.id={{searchquery_converted.0}}">
+                                    <i class="fas fa-dna"></i><i> </i><b>ClinGen</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="varsome_button" class="btn btn-success" target="_blank" href="https://varsome.com/variant/hg38/{{searchquery_converted.0}}">
+                                    <i class="fas fa-check"></i><i> </i><b>VarSome</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="gnomad_button" class="btn btn-dark" target="_blank" href="https://gnomad.broadinstitute.org/variant/{{searchquery_converted.0}}?dataset=gnomad_r3">
+                                    <i class="fas fa-chart-area"></i><i> </i><b>gnomAD</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="franklingenoox_button" class="btn btn-warning" target="_blank" href="https://franklin.genoox.com/clinical-db/variant/snp/chr{{searchquery_converted.0}}-hg38">
+                                    <i class="fas fa-vials"></i><i> </i><b>FranklinGenoox</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="autopvs1_button" class="btn btn-danger" target="_blank" href="https://autopvs1.bgi.com/variant/GRCh38/{{searchquery_converted.0}}">
+                                    <i class="fas fa-syringe"></i><i> </i><b>AutoPVS1</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="google_button" class="btn btn-light text-primary" target="_blank" href="https://www.google.com/">
+                                    <i class="fab fa-google"></i><i> </i><b>Google</b>
+                                </a>
+                            </td>
+                        </div>
+                    </div>
+
+                    {% elif "GRCh37" in request.get_full_path  %}
+                    
+                    <div class="card-body">
+                        <div class="buttons">
+                            <td>
+                                <a id="db_button" class="btn btn-primary" target="_blank" href="https://www.ncbi.nlm.nih.gov/snp/?term={{searchquery_converted.0}}">
+                                    <i class="fas fa-database"></i><i> </i><b>dbSNP</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="clinvar_button" class="btn btn-info" target="_blank" href="https://www.ncbi.nlm.nih.gov/clinvar/?term={{searchquery_converted.0}}">
+                                    <i class="fas fa-capsules"></i><i> </i><b>ClinVar</b>
+                                </a>
+                            </td>
+                            <td>
+                                <a id="clingen_button" class="btn btn-secondary" target="_blank" href="https://reg.clinicalgenome.org/redmine/projects/registry/genboree_registry/alleles?gnomAD.id={{searchquery_converted.0}}">
+                                    <i class="fas fa-dna"></i><i> </i><b>ClinGen</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="varsome_button" class="btn btn-success" target="_blank" href="https://varsome.com/variant/hg19/{{searchquery_converted.0}}">
+                                    <i class="fas fa-check"></i><i> </i><b>VarSome</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="gnomad_button" class="btn btn-dark" target="_blank" href="https://gnomad.broadinstitute.org/variant/{{searchquery_converted.0}}">
+                                    <i class="fas fa-chart-area"></i><i> </i><b>gnomAD</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="franklingenoox_button" class="btn btn-warning" target="_blank" href="https://franklin.genoox.com/clinical-db/variant/snp/chr{{searchquery_converted.0}}">
+                                    <i class="fas fa-vials"></i><i> </i><b>FranklinGenoox</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="autopvs1_button" class="btn btn-danger" target="_blank" href="https://autopvs1.bgi.com/variant/hg19/{{searchquery_converted.0}}">
+                                    <i class="fas fa-syringe"></i><i> </i><b>AutoPVS1</b>
+                                </a>
+                            </td> 
+                            <td>
+                                <a id="google_button" class="btn btn-light text-primary" target="_blank" href="https://www.google.com/">
+                                    <i class="fab fa-google"></i><i> </i><b>Google</b>
+                                </a>
+                            </td>
+                        </div>
+                    </div>
+                    {% endif %}
+                {%endif%} 
+            {%endif%} 
+       {%endif%}        
+       
+    <style>
+        /*To put a better zoom look to all base except the extends html*/
+        .container {
+            zoom: 1.1;
+            -moz-transform: scale(1.1);
+            -moz-transform-origin: 0 0;
+            -o-transform: scale(1.1);
+            -o-transform-origin: 0 0;
+            -webkit-transform: scale(1.1);
+            -webkit-transform-origin: 0 0;
+          }
+
+        .buttons {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 100px;
+            font-size:70px;
+            color:orange
+        }
+
+        .title-icon {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color:orange;
+        }
+
+        .search-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 100px;
+            margin-bottom: 100px;
+        }         
+
+        .hide { 
+            font-size: 0;
+            margin-top: -100px;
+            margin-left: -100px;
+        }
+
+        .selected {
+            background-color: #f5f5f5;
+            font-weight: bold;
+        }
+        
+        #reports_table {
+            display: none;
+            border: 1px solid #cccccc;
+        }
+    
+        #db_btn .btn {
+            display: none;
+            margin: 2.5px;
+        }
+
+        #db_btn {
+            display: flex;
+            flex-wrap: wrap;
+          }
+        
+        /*To prevent the content in some rows of the table from overflowing outside the basepage*/
+        table#variants_table td {
+            word-wrap: break-word;
+            max-width: 200px; 
+        }
+    </style>
+    
+    <script>
+        
+        var searchForm = document.querySelector('.search-box form');
+        var searchBox = document.getElementById('search-variant');
+        var dropdownButton = document.getElementById('dropdown-button');
+
+
+        var genomeVersion = ''; // Initialize genomeVersion variable 
+        document.querySelectorAll('.example-query').forEach(function(element) {
+            element.addEventListener('click', function(event) {
+                event.preventDefault();
+                genomeVersion = this.textContent;
+                dropdownButton.textContent = genomeVersion;
+            });
+        });
+
+        // Check if "GRCh38" is present in the href
+        if (window.location.href.includes('GRCh38')) {
+            genomeVersion = 'GRCh38';
+            dropdownButton.textContent = genomeVersion;
+        }
+
+
+        searchForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            var searchQuery = 'GRCh37';
+
+            if (genomeVersion === 'GRCh38') {
+                searchQuery = 'GRCh38';
+            }
+
+            searchQuery += searchBox.value;
+            window.location.href = '?searchvariant=' + encodeURIComponent(searchQuery);
+       
+        });
+
+
+        function handleKeyDown(event) {
+            if (event.key === "ArrowDown") {
+              event.preventDefault(); // Prevent the default behavior of moving the cursor to the right
+              var placeholder = document.getElementById('search-variant').getAttribute('placeholder');
+              document.getElementById('search-variant').value = placeholder;
+            }
+          }
+
+
+        jQuery(document).ready(function($) {
+            $(".clickable-row").click(function() {
+              if ($(this).hasClass("selected")) {
+                    $(this).removeClass("selected"); // remove the "selected" class from the clicked row
+                    $("#db_btn .btn").hide("show");// hide the div with class "btn"
+                    $("#reports_table").hide("show");// hide the #reports_table
+                } 
+                else {
+                    $(".clickable-row.selected").removeClass("selected"); // remove the "selected" class from all other rows
+                    $(this).addClass("selected"); // add a "selected" class to the clicked row
+                    $("#db_btn .btn").hide();// hide the div with class "btn"
+                    $("#reports_table").hide();// hide the #reports_table
+                    
+                    $("#db_btn .btn").show("show");// show the div with class "btn"
+                    $("#reports_table").show("show");// show the #reports_table
+                    $('html, body').animate({
+                        scrollTop: $('#reports_table').offset().top - 800
+                    }, 1);
+                   
+                }
+
+                var columnIndices = [6, 7, 8, 9, 10, 11, 12, 13];
+                var buttonIds = ["db_button", "clinvar_button", "clingen_button", "varsome_button", "gnomad_button", "franklingenoox_button", "autopvs1_button", "google_button"];
+
+                for (var i = 0; i < columnIndices.length; i++) {
+                var column = $(this).find("td").eq(columnIndices[i]);
+                var href_outside_database = column[0].lastElementChild.href;
+                $("#" + buttonIds[i]).attr("href", href_outside_database);
+                }
+  
+            });
+          });
+
+
+          $(".clickable-row").click(function() {
+            
+            // exact position of reports column.ep()
+            var SampleColumn = $(this).find("td").eq(14)
+            var variant_reports_id = SampleColumn[0].outerText
+            console.log(variant_reports_id);
+            variant_reports_id = variant_reports_id.split(" "); 
+        
+
+            var id_reports_table = $("#reports_table td:first-child").map(function() {
+                return $(this).text();
+            }).get();
+           
+
+            for (var i = 0; i < id_reports_table.length; i++) {
+                if (variant_reports_id.includes(id_reports_table[i])) { // verifica se o elemento atual está presente no array original
+                    console.log(id_reports_table[i] + " está presente no array.");
+                    var row = $("#reports_table td:first-child:contains('" + id_reports_table[i] + "')").parent();
+                    row.show();
+                } else {
+                    console.log(id_reports_table[i] + " não está presente no array.");
+                    var row = $("#reports_table td:first-child:contains('" + id_reports_table[i] + "')").parent();
+                    row.hide();
+                }
+            }
+          });
+          
+    </script>
+    {% endblock content %}
